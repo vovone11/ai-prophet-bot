@@ -1,5 +1,6 @@
 __pycache__/
 *.pyc
+bot.py
 ai_prophet.db
 .env
 venv/
