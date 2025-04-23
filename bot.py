@@ -2,6 +2,10 @@ import logging
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, MessageHandler, filters, ConversationHandler
 import sqlite3
+from config import BOT_TOKEN, OPENAI_TOKEN
+import openai
+
+openai.api_key = OPENAI_TOKEN
 
 # Логирование
 logging.basicConfig(level=logging.INFO)
