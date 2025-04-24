@@ -5,7 +5,10 @@ from aiogram.utils import executor
 from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters.state import State, StatesGroup
 from aiogram.dispatcher.filters import Command, Text
+from prompts import build_prompt
 import logging
+import openai
+from openai import OpenAI
 import os
 from dotenv import load_dotenv  # Подключаем dotenv
 
@@ -32,14 +35,14 @@ storage = MemoryStorage()
 dp.storage = storage  # Подключаем хранилище
 
 class Form(StatesGroup):
-    age = State()  # Стартовый вопрос (возраст)
-    gender = State()  # Следующий вопрос (пол)
-    job = State()  # Следующий вопрос (профессия)
-    routine = State()
-    lifestyle = State()
+    age = State()
+    gender = State()
+    job = State()
     health = State()
     food = State()
     goals = State()
+    routine = State()
+    lifestyle = State()
     social = State()
 
 # Обработчик команды /start
@@ -118,36 +121,24 @@ async def process_food(message: types.Message, state: FSMContext):
     logging.info("Переход к следующему вопросу: информация о целях")
     await message.reply("Какие у тебя цели?")
 
-# Обработчик получения информации о целях
 @dp.message_handler(state=Form.goals)
-async def process_social(message: types.Message, state: FSMContext):
-    """
-    Обрабатываем информацию о целях.
-    """
+async def process_goals(message: types.Message, state: FSMContext):
     logging.info(f"Получены цели: {message.text}")
     await state.update_data(goals=message.text)
     await Form.next()
     logging.info("Переход к следующему вопросу: распорядок дня")
     await message.reply("Опиши свой распорядок дня")
 
-# Обработчик получения распорядка дня
-@dp.message_handler(state=Form.goals)
-async def process_social(message: types.Message, state: FSMContext):
-    """
-    Обрабатываем информацию о целях.
-    """
+@dp.message_handler(state=Form.routine)
+async def process_routine(message: types.Message, state: FSMContext):
     logging.info(f"Получен распорядок дня: {message.text}")
     await state.update_data(routine=message.text)
     await Form.next()
     logging.info("Переход к следующему вопросу: образ жизни")
     await message.reply("Какой у тебя образ жизни?")
 
-    # Обработчик получения образа жизни
-@dp.message_handler(state=Form.goals)
-async def process_social(message: types.Message, state: FSMContext):
-    """
-    Обрабатываем информацию о целях.
-    """
+@dp.message_handler(state=Form.lifestyle)
+async def process_lifestyle(message: types.Message, state: FSMContext):
     logging.info(f"Получен образ жизни: {message.text}")
     await state.update_data(lifestyle=message.text)
     await Form.next()
@@ -162,8 +153,21 @@ async def process_social(message: types.Message, state: FSMContext):
     """
     logging.info(f"Получены социальные связи: {message.text}")
     await state.update_data(social=message.text)
-    # Завершаем процесс сбора данных, можно передать в OpenAI или обработать другие данные
-    await message.reply("Спасибо за информацию! Теперь я могу сделать прогноз.")
+    
+    user_data = await state.get_data()
+    prompt = build_prompt(user_data)
 
-if __name__ == '__main__':
-    executor.start_polling(dp, skip_updates=True)
+    try:
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",  # можно заменить на другой, если доступен
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=1000,
+            temperature=0.7
+        )
+        answer = response['choices'][0]['message']['content']
+        await message.reply("Вот твой прогноз будущего:\n\n" + answer)
+    except Exception as e:
+        logging.error(f"Ошибка при обращении к OpenAI: {e}")
+        await message.reply("Произошла ошибка при генерации прогноза. Попробуй позже.")
+
+    await state.finish()

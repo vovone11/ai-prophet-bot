@@ -43,7 +43,7 @@ async def process_goals(message: Message, state: FSMContext):
 # Функция для обработки ответа на распорядок дня
 async def process_routine(message: Message, state: FSMContext):
     await state.update_data(routine=message.text)
-    await state.set_state("routine")
+    await state.set_state("lifestyle")
     await message.reply("Какой у вас образ жизни?")
 
 # Функция для обработки ответа на образ жизни
