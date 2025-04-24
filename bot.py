@@ -8,10 +8,8 @@ from dotenv import load_dotenv
 import logging
 from aiohttp import ClientSession
 from aiogram.types import Update
-from fastapi import Request
 import os
 import openai
-from openai import OpenAI
 from contextlib import asynccontextmanager
 
 from prompts import build_prompt
@@ -25,10 +23,10 @@ if API_TOKEN is None:
 
 bot = Bot(token=API_TOKEN)
 storage = MemoryStorage()
-dp = Dispatcher(bot, storage=storage)
+dp = Dispatcher(bot)
 dp.middleware.setup(LoggingMiddleware())
 
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+openai.api_key = os.getenv("OPENAI_API_KEY")
 
 class Form(StatesGroup):
     age = State()
@@ -100,7 +98,7 @@ async def process_social(message: types.Message, state: FSMContext):
     user_data = await state.get_data()
     prompt = build_prompt(user_data)
     try:
-        response = client.chat.completions.create(
+        response = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
             messages=[{"role": "user", "content": prompt}],
             max_tokens=1000,
@@ -125,12 +123,12 @@ async def lifespan(app: FastAPI):
     yield
     await bot.delete_webhook()
     logging.info("Webhook удалён")
-    
+
 app = FastAPI(lifespan=lifespan)
 
 @app.post("/webhook")
 async def telegram_webhook(update: dict):
-    telegram_update = types.Update.to_object(update)
+    telegram_update = Update(**update)  # Замена на правильный метод
     await dp.process_update(telegram_update)
     return {"ok": True}
 
