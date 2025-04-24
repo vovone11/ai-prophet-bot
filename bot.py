@@ -29,7 +29,7 @@ if OPENAI_API_KEY is None:
 
 bot = Bot(token=API_TOKEN)
 storage = MemoryStorage()
-dp = Dispatcher(bot, storage=storage)  # Убедитесь, что storage передан в Dispatcher
+dp = Dispatcher(bot, storage=storage)
 dp.middleware.setup(LoggingMiddleware())
 
 client = OpenAI(api_key=OPENAI_API_KEY)
@@ -134,10 +134,15 @@ app = FastAPI(lifespan=lifespan)
 
 @app.post("/webhook")
 async def telegram_webhook(update: dict):
-    telegram_update = Update(**update)  # Исправление создания объекта
+    telegram_update = Update(**update)
     await dp.process_update(telegram_update)
     return {"ok": True}
 
 @app.api_route("/", methods=["GET", "HEAD"])
 async def root():
     return {"status": "ok", "message": "AI-прорицатель работает"}
+
+# Запуск webhook для aiogram
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host=WEBAPP_HOST, port=WEBAPP_PORT)
