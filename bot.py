@@ -8,21 +8,21 @@ from aiogram.dispatcher.filters import Command, Text
 from prompts import build_prompt
 import logging
 import openai
+from openai import OpenAI
 import os
 import telegram
 from dotenv import load_dotenv  # Подключаем dotenv
 
+logging.basicConfig(level=logging.INFO)
 load_dotenv()
 
 logging.basicConfig(level=logging.INFO)
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 API_TOKEN = os.getenv('BOT_TOKEN')
-OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
 
 if API_TOKEN is None:
     raise ValueError("BOT_TOKEN не найден в файле .env")
-if not OPENAI_API_KEY:
-    raise ValueError("OPENAI_API_KEY не найден в файле .env")
 
 
 bot = Bot(token=API_TOKEN)
@@ -156,9 +156,9 @@ async def process_social(message: types.Message, state: FSMContext):
     
     user_data = await state.get_data()
     prompt = build_prompt(user_data)
-
+    logging.info(f"Отправка запроса в OpenAI: {prompt}")
     try:
-        response = openai.ChatCompletion.create(
+        response = client.chat.completions.create(
             model="gpt-3.5-turbo",  # можно заменить на другой, если доступен
             messages=[{"role": "user", "content": prompt}],
             max_tokens=1000,
@@ -167,9 +167,10 @@ async def process_social(message: types.Message, state: FSMContext):
         answer = response['choices'][0]['message']['content']
         await message.reply("Вот твой прогноз будущего:\n\n" + answer)
     except Exception as e:
-        logging.error(f"Ошибка при обращении к OpenAI: {e}")
+        logging.error(f"Ошибка при обращении к OpenAI: {e}", exc_info=True)
         await message.reply("Произошла ошибка при генерации прогноза. Попробуй позже.")
 
-    if __name__ == '__main__':
-        executor.start_polling(dp, skip_updates=True)
-
+# Этот блок должен быть в самом конце
+if __name__ == '__main__':
+    logging.info("Запуск бота...")
+    executor.start_polling(dp, skip_updates=True)
