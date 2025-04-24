@@ -41,3 +41,25 @@ __pycache__/
 # Файлы настройки Git
 .gitconfig
 
+# Файлы и папки базы данных
+
+# SQLite
+*.sqlite
+*.sqlite3
+*.db
+
+# Файлы дампов (если они создаются автоматически)
+*.sql
+*.sql.gz
+*.sql.zip
+
+# Конфигурации базы данных (например, для MySQL, PostgreSQL)
+*.my.cnf
+*.pgpass
+
+# Лог-файлы базы данных
+*.log
+
+# Если вы используете Docker, можете добавить игнорирование файлов базы данных в контейнерах
+docker-compose.override.yml
+docker-compose.yml
