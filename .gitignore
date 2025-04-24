@@ -1,6 +1,43 @@
+# Общие файлы и папки, которые игнорируются Git
+*.log
+*.tmp
+*.bak
+*.swp
+
+# Директории с зависимостями
+node_modules/
+vendor/
+
+# Конфигурационные файлы среды
+.env
+
+# Системные файлы
+.DS_Store
+Thumbs.db
+
+# Скомпилированные файлы
+*.class
+*.o
+*.out
+
+# Идея проекта
+.idea/
+.vscode/
+
+# Директории тестирования (если используется, например, pytest)
 __pycache__/
 *.pyc
-bot.py
-ai_prophet.db
-.env
-venv/
+
+# Файлы, сгенерированные средой разработки
+*.sublime-project
+*.sublime-workspace
+*.vscode/
+
+# Файлы и папки для Python
+*.pyo
+*.pyd
+*.sqlite
+
+# Файлы настройки Git
+.gitconfig
+
