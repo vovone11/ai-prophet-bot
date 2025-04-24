@@ -63,3 +63,6 @@ __pycache__/
 # Если вы используете Docker, можете добавить игнорирование файлов базы данных в контейнерах
 docker-compose.override.yml
 docker-compose.yml
+
+.database.db
+.user_data.db
