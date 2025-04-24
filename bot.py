@@ -115,14 +115,6 @@ WEBHOOK_URL = f"{os.getenv('WEBHOOK_HOST')}{WEBHOOK_PATH}"
 WEBAPP_HOST = "0.0.0.0"
 WEBAPP_PORT = int(os.getenv("PORT", 10000))
 
-app = FastAPI()
-
-@app.post(WEBHOOK_PATH)
-async def webhook_handler(request: Request):
-    update = types.Update(**await request.json())
-    await dp.process_update(update)
-    return {"ok": True}
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # 👇 Устанавливаем webhook при запуске
