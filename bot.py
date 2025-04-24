@@ -130,6 +130,10 @@ async def on_shutdown():
     await bot.delete_webhook()
     logging.info("Webhook удалён")
 
+@app.get("/")
+async def root():
+    return {"status": "ok", "message": "AI-прорицатель работает"}
+
 if __name__ == '__main__':
     import asyncio
     import uvicorn
