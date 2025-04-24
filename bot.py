@@ -3,13 +3,14 @@ from aiogram.contrib.middlewares.logging import LoggingMiddleware
 from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters.state import State, StatesGroup
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from dotenv import load_dotenv
 import logging
 from aiohttp import ClientSession
 from aiogram.types import Update
 import os
 import openai
+from openai import OpenAI
 from contextlib import asynccontextmanager
 
 from prompts import build_prompt
@@ -18,15 +19,20 @@ load_dotenv()
 logging.basicConfig(level=logging.INFO)
 
 API_TOKEN = os.getenv('BOT_TOKEN')
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+
 if API_TOKEN is None:
     raise ValueError("BOT_TOKEN не найден в .env")
 
+if OPENAI_API_KEY is None:
+    raise ValueError("OPENAI_API_KEY не найден в .env")
+
 bot = Bot(token=API_TOKEN)
 storage = MemoryStorage()
-dp = Dispatcher(bot)
+dp = Dispatcher(bot, storage=storage)  # Убедитесь, что storage передан в Dispatcher
 dp.middleware.setup(LoggingMiddleware())
 
-openai.api_key = os.getenv("OPENAI_API_KEY")
+client = OpenAI(api_key=OPENAI_API_KEY)
 
 class Form(StatesGroup):
     age = State()
@@ -40,8 +46,8 @@ class Form(StatesGroup):
     social = State()
 
 @dp.message_handler(commands=['start'])
-async def cmd_start(message: types.Message):
-    await Form.age.set()
+async def cmd_start(message: types.Message, state: FSMContext):
+    await state.set_state(Form.age)
     await message.reply("Привет! Я твой AI-прорицатель. Сколько тебе лет?")
 
 @dp.message_handler(state=Form.age)
@@ -98,7 +104,7 @@ async def process_social(message: types.Message, state: FSMContext):
     user_data = await state.get_data()
     prompt = build_prompt(user_data)
     try:
-        response = openai.ChatCompletion.create(
+        response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[{"role": "user", "content": prompt}],
             max_tokens=1000,
@@ -128,7 +134,7 @@ app = FastAPI(lifespan=lifespan)
 
 @app.post("/webhook")
 async def telegram_webhook(update: dict):
-    telegram_update = Update(**update)  # Замена на правильный метод
+    telegram_update = Update(**update)  # Исправление создания объекта
     await dp.process_update(telegram_update)
     return {"ok": True}
 
