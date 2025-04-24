@@ -8,8 +8,8 @@ from aiogram.dispatcher.filters import Command, Text
 from prompts import build_prompt
 import logging
 import openai
-from openai import OpenAI
 import os
+import telegram
 from dotenv import load_dotenv  # Подключаем dotenv
 
 load_dotenv()
@@ -170,4 +170,6 @@ async def process_social(message: types.Message, state: FSMContext):
         logging.error(f"Ошибка при обращении к OpenAI: {e}")
         await message.reply("Произошла ошибка при генерации прогноза. Попробуй позже.")
 
-    await state.finish()
+    if __name__ == '__main__':
+        executor.start_polling(dp, skip_updates=True)
+
