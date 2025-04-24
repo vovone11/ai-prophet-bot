@@ -6,6 +6,7 @@ from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from fastapi import FastAPI, Request
 from dotenv import load_dotenv
 import logging
+from aiohttp import ClientSession
 import os
 import openai
 from openai import OpenAI
@@ -120,8 +121,11 @@ async def lifespan(app: FastAPI):
     # 👇 Устанавливаем webhook при запуске
     await bot.set_webhook(WEBHOOK_URL)
     logging.info(f"Webhook установлен: {WEBHOOK_URL}")
-
-    yield  # 👈 тут FastAPI будет обрабатывать запросы
+ 
+ # Создаём aiohttp сессию для выполнения асинхронных запросов
+    async with ClientSession() as session:
+        yield
+    
 
     # 👇 Удаляем webhook при завершении
     await bot.delete_webhook()
