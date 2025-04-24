@@ -19,45 +19,42 @@ async def process_gender(message: Message, state: FSMContext):
 # Функция для обработки ответа на профессию
 async def process_job(message: Message, state: FSMContext):
     await state.update_data(job=message.text)
-    await state.set_state("routine")
-    await message.reply("Опишите свой распорядок дня.")
+    await state.set_state("health")
+    await message.reply("Как вы оцениваете свое здоровье?")
 
 # Функция для обработки ответа на здоровье
 async def process_health(message: Message, state: FSMContext):
     await state.update_data(health=message.text)
-    await state.set_state("health")
-    await message.reply("Что вы едите?")
+    await state.set_state("food")
+    await message.reply("Как вы питаетесь?")
 
 # Функция для обработки ответа на питание
 async def process_food(message: Message, state: FSMContext):
     await state.update_data(food=message.text)
-    await state.set_state("food")
+    await state.set_state("goals")
     await message.reply("Какие у вас цели?")
 
 # Функция для обработки ответа на цели
 async def process_goals(message: Message, state: FSMContext):
     await state.update_data(goals=message.text)
     await state.set_state("goals")
-    await message.reply("Какие у вас социальные связи?")
+    await message.reply("Какие у вас распорядок дня?")
 
 # Функция для обработки ответа на распорядок дня
 async def process_routine(message: Message, state: FSMContext):
     await state.update_data(routine=message.text)
     await state.set_state("routine")
-    await message.reply("Как вы ведете образ жизни?")
+    await message.reply("Какой у вас образ жизни?")
 
 # Функция для обработки ответа на образ жизни
 async def process_lifestyle(message: Message, state: FSMContext):
     await state.update_data(lifestyle=message.text)
-    await state.set_state("health")
-    await message.reply("Какое у вас здоровье?")
+    await state.set_state("social")
+    await message.reply("Есть ли у вас социальные связи?")
 
 # Функция для обработки ответа на социальные связи
 async def process_social(message: Message, state: FSMContext):
     await state.update_data(social=message.text)
-    await state.set_state("social")
-    await message.reply("Какое у вас здоровье?")
-
 
     # Собираем все данные пользователя
     user_data = await state.get_data()

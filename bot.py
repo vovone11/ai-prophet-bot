@@ -115,8 +115,8 @@ async def process_food(message: types.Message, state: FSMContext):
     logging.info(f"Получено питание: {message.text}")
     await state.update_data(food=message.text)
     await Form.next()
-    logging.info("Переход к следующему вопросу: социальные связи")
-    await message.reply("Каковы твои социальные связи?")
+    logging.info("Переход к следующему вопросу: информация о целях")
+    await message.reply("Какие у тебя цели?")
 
 # Обработчик получения информации о целях
 @dp.message_handler(state=Form.goals)
@@ -124,10 +124,35 @@ async def process_social(message: types.Message, state: FSMContext):
     """
     Обрабатываем информацию о целях.
     """
-    logging.info(f"Получены социальные связи: {message.text}")
-    await state.update_data(social=message.text)
-    # Завершаем процесс сбора данных, можно передать в OpenAI или обработать другие данные
-    await message.reply("Спасибо за информацию! Теперь я могу сделать прогноз.")
+    logging.info(f"Получены цели: {message.text}")
+    await state.update_data(goals=message.text)
+    await Form.next()
+    logging.info("Переход к следующему вопросу: распорядок дня")
+    await message.reply("Опиши свой распорядок дня")
+
+# Обработчик получения распорядка дня
+@dp.message_handler(state=Form.goals)
+async def process_social(message: types.Message, state: FSMContext):
+    """
+    Обрабатываем информацию о целях.
+    """
+    logging.info(f"Получен распорядок дня: {message.text}")
+    await state.update_data(routine=message.text)
+    await Form.next()
+    logging.info("Переход к следующему вопросу: образ жизни")
+    await message.reply("Какой у тебя образ жизни?")
+
+    # Обработчик получения образа жизни
+@dp.message_handler(state=Form.goals)
+async def process_social(message: types.Message, state: FSMContext):
+    """
+    Обрабатываем информацию о целях.
+    """
+    logging.info(f"Получен образ жизни: {message.text}")
+    await state.update_data(lifestyle=message.text)
+    await Form.next()
+    logging.info("Переход к следующему вопросу: социальные связи")
+    await message.reply("Есть ли у тебя социальные связи?")
 
 # Обработчик получения информации о социальных связях
 @dp.message_handler(state=Form.social)
