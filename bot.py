@@ -9,6 +9,7 @@ import logging
 import os
 import openai
 from openai import OpenAI
+from contextlib import asynccontextmanager
 
 from prompts import build_prompt
 
@@ -122,20 +123,20 @@ async def webhook_handler(request: Request):
     await dp.process_update(update)
     return {"ok": True}
 
-async def on_startup():
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # 👇 Устанавливаем webhook при запуске
     await bot.set_webhook(WEBHOOK_URL)
     logging.info(f"Webhook установлен: {WEBHOOK_URL}")
 
-async def on_shutdown():
+    yield  # 👈 тут FastAPI будет обрабатывать запросы
+
+    # 👇 Удаляем webhook при завершении
     await bot.delete_webhook()
     logging.info("Webhook удалён")
+
+app = FastAPI(lifespan=lifespan)
 
 @app.api_route("/", methods=["GET", "HEAD"])
 async def root():
     return {"status": "ok", "message": "AI-прорицатель работает"}
-
-if __name__ == '__main__':
-    import asyncio
-    import uvicorn
-    asyncio.run(on_startup())
-    uvicorn.run(app, host=WEBAPP_HOST, port=WEBAPP_PORT)
