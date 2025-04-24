@@ -1,132 +1,144 @@
-import os
-import sqlite3
-import openai
 from aiogram import Bot, Dispatcher, types
-from aiogram.types import ReplyKeyboardRemove
+from aiogram.types import ParseMode
+from aiogram.contrib.middlewares.logging import LoggingMiddleware
 from aiogram.utils import executor
-from dotenv import load_dotenv
-from openai import OpenAI
-from prompts import build_prompt
+from aiogram.dispatcher import FSMContext
+from aiogram.dispatcher.filters.state import State, StatesGroup
+from aiogram.dispatcher.filters import Command, Text
 import logging
+import os
+from dotenv import load_dotenv  # Подключаем dotenv
 
 load_dotenv()
 
-# Настроим логирование
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+logging.basicConfig(level=logging.INFO)
 
-bot = Bot(token=os.getenv("BOT_TOKEN"))
+API_TOKEN = os.getenv('BOT_TOKEN')
+OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
+
+if API_TOKEN is None:
+    raise ValueError("BOT_TOKEN не найден в файле .env")
+if not OPENAI_API_KEY:
+    raise ValueError("OPENAI_API_KEY не найден в файле .env")
+
+
+bot = Bot(token=API_TOKEN)
 dp = Dispatcher(bot)
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+dp.middleware.setup(LoggingMiddleware())
 
-DB_FILE = "database.db"
+# Подключаем хранилище состояний (MemoryStorage для тестирования)
+from aiogram.contrib.fsm_storage.memory import MemoryStorage
+storage = MemoryStorage()
+dp.storage = storage  # Подключаем хранилище
 
-def init_db():
-    conn = sqlite3.connect(DB_FILE)
-    c = conn.cursor()
-    c.execute('''
-        CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            telegram_id INTEGER,
-            question TEXT,
-            answer TEXT,
-            prediction TEXT
-        )
-    ''')
-    conn.commit()
-    conn.close()
+class Form(StatesGroup):
+    age = State()  # Стартовый вопрос (возраст)
+    gender = State()  # Следующий вопрос (пол)
+    job = State()  # Следующий вопрос (профессия)
+    routine = State()
+    lifestyle = State()
+    health = State()
+    food = State()
+    goals = State()
+    social = State()
 
-init_db()
-user_data = {}
-
-questions = [
-    ("age", "Сколько тебе лет?"),
-    ("gender", "Укажи пол (М/Ж):"),
-    ("job", "Чем ты занимаешься?"),
-    ("routine", "Опиши свой обычный день:"),
-    ("lifestyle", "Какой у тебя образ жизни (активный/сидячий)?"),
-    ("health", "Как ты оцениваешь своё здоровье?"),
-    ("food", "Как ты питаешься?"),
-    ("goals", "Какие у тебя цели на ближайшие годы?"),
-    ("social", "Есть ли у тебя близкие друзья/партнёр?"),
-]
-
+# Обработчик команды /start
 @dp.message_handler(commands=['start'])
-async def start(message: types.Message):
-    logging.info(f"Старт: Пользователь {message.from_user.id} начал разговор")
-    user_data[message.from_user.id] = {"step": 0, "answers": {}}
-    await message.answer("Привет! Я ИИ-прорицатель. Давай узнаем, куда ты движешься.")
-    await message.answer(questions[0][1])
+async def cmd_start(message: types.Message):
+    """
+    Отправка первого вопроса: возраст.
+    """
+    await Form.age.set()
+    await message.reply("Привет! Я твой AI-прорицатель. Скажи, сколько тебе лет?")
 
-@dp.message_handler()
-async def handle_answers(message: types.Message):
-    uid = message.from_user.id
-    logging.info(f"Пользователь {uid} ответил на вопрос: {message.text}")
-    # Проверяем, есть ли у пользователя уже данные
-    if uid not in user_data:
-        return
-    
-    data = user_data[uid]
-    step = data["step"]
-    
-    # Проверка, если все вопросы уже заданы
-    if step >= len(questions):
-        await message.answer("Ты уже прошел все вопросы. Анализирую твое будущее...")
-        return
-    
-    # Сохраняем ответ и увеличиваем шаг
-    key, _ = questions[step]
-    data["answers"][key] = message.text
-    data["step"] += 1
-    
-    # Переходим к следующему вопросу или завершаем
-    if data["step"] < len(questions):
-        next_question = questions[data["step"]][1]
-        await message.answer(next_question)
+# Обработчик получения возраста
+@dp.message_handler(state=Form.age)
+async def process_age(message: types.Message, state: FSMContext):
+    """
+    Обрабатываем введенный возраст и переходим к следующему вопросу (пол).
+    """
+    logging.info(f"Получен возраст: {message.text}")
+    await state.update_data(age=message.text)
+    await Form.next()  # Переход к следующему состоянию
+    logging.info("Переход к следующему вопросу: пол")
+    await message.reply("Какой у тебя пол?")
+
+# Обработчик получения пола
+@dp.message_handler(state=Form.gender)
+async def process_gender(message: types.Message, state: FSMContext):
+    """
+    Обрабатываем введенный пол и переходим к следующему вопросу (профессия).
+    """
+    logging.info(f"Получен пол: {message.text}")
+    await state.update_data(gender=message.text)
+    await Form.next()  # Переход к следующему состоянию
+    logging.info("Переход к следующему вопросу: профессия")
+    await message.reply("Какая у тебя профессия?")
+
+# Обработчик получения профессии
+@dp.message_handler(state=Form.job)
+async def process_job(message: types.Message, state: FSMContext):
+    """
+    Обрабатываем введенную профессию и переходим к следующему вопросу (например, здоровье).
+    """
+    logging.info(f"Получена профессия: {message.text}")
+    await state.update_data(job=message.text)
+    data = await state.get_data()
+    if 'health' not in data:
+        await Form.next()  # Переход к следующему состоянию
+        logging.info("Переход к следующему вопросу: здоровье")
+        await message.reply("Какое у тебя здоровье?")
     else:
-        # Все ответы собраны, теперь анализируем будущее
-        await message.answer("Анализирую твое будущее...")
-        
-        prompt = build_prompt(data["answers"])
-        response = openai.ChatCompletion.create(
-            model="gpt-4",
-            messages=[{"role": "user", "content": prompt}]
-        )
-        result = response['choices'][0]['message']['content']
-        await message.answer(result, reply_markup=ReplyKeyboardRemove())
-        
-        # Удаляем данные пользователя после завершения
-        del user_data[uid]
-    data = user_data.get(uid)
+        # Если все вопросы пройдены, можно завершить
+        await message.reply("Спасибо за информацию! Я сформирую прогноз.")
+        # Генерация прогноза и завершение процесса
+        await state.finish()
 
-    if not data:
-        await message.answer("Пожалуйста, начни с команды /start")
-        return
+# Обработчик получения информации о здоровье
+@dp.message_handler(state=Form.health)
+async def process_health(message: types.Message, state: FSMContext):
+    """
+    Обрабатываем информацию о здоровье и переходим к следующему вопросу (например, питание).
+    """
+    logging.info(f"Получено состояние здоровья: {message.text}")
+    await state.update_data(health=message.text)
+    await Form.next()
+    logging.info("Переход к следующему вопросу: питание")
+    await message.reply("Какое у тебя питание?")
 
-    step = data["step"]
-    key, _ = questions[step]
-    data["answers"][key] = message.text
-    data["step"] += 1
+# Обработчик получения питания
+@dp.message_handler(state=Form.food)
+async def process_food(message: types.Message, state: FSMContext):
+    """
+    Обрабатываем информацию о питании и переходим к следующему вопросу (например, социальные связи).
+    """
+    logging.info(f"Получено питание: {message.text}")
+    await state.update_data(food=message.text)
+    await Form.next()
+    logging.info("Переход к следующему вопросу: социальные связи")
+    await message.reply("Каковы твои социальные связи?")
 
-    if data["step"] < len(questions):
-        next_question = questions[data["step"]][1]
-        await message.answer(next_question)
-    else:
-        await message.answer("Анализирую твое будущее... 🔮")
+# Обработчик получения информации о целях
+@dp.message_handler(state=Form.goals)
+async def process_social(message: types.Message, state: FSMContext):
+    """
+    Обрабатываем информацию о целях.
+    """
+    logging.info(f"Получены социальные связи: {message.text}")
+    await state.update_data(social=message.text)
+    # Завершаем процесс сбора данных, можно передать в OpenAI или обработать другие данные
+    await message.reply("Спасибо за информацию! Теперь я могу сделать прогноз.")
 
-        prompt = build_prompt(data["answers"])
-        try:
-            response = client.chat.completions.create(
-                model="gpt-4",
-                messages=[{"role": "user", "content": prompt}]
-            )
-            result = response.choices[0].message.content
-            await message.answer(result, reply_markup=ReplyKeyboardRemove())
-        except Exception as e:
-            logging.error(f"Ошибка OpenAI: {e}")
-            await message.answer(f"Произошла ошибка: {e}")
-            print(f"Ошибка OpenAI: {e}")
-
-        del user_data[uid]
+# Обработчик получения информации о социальных связях
+@dp.message_handler(state=Form.social)
+async def process_social(message: types.Message, state: FSMContext):
+    """
+    Обрабатываем информацию о социальных связях и завершаем сбор данных.
+    """
+    logging.info(f"Получены социальные связи: {message.text}")
+    await state.update_data(social=message.text)
+    # Завершаем процесс сбора данных, можно передать в OpenAI или обработать другие данные
+    await message.reply("Спасибо за информацию! Теперь я могу сделать прогноз.")
 
 if __name__ == '__main__':
     executor.start_polling(dp, skip_updates=True)
