@@ -130,8 +130,8 @@ app = FastAPI(lifespan=lifespan)
 
 @app.post("/webhook")
 async def telegram_webhook(update: dict):
-    telegram_update = Update(**update)
-    await dp.process_update(telegram_update)
+    telegram_update = types.Update.to_object(update)
+    await dp.feed_update(bot, telegram_update)
     return {"ok": True}
 
 @app.api_route("/", methods=["GET", "HEAD"])
