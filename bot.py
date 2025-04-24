@@ -10,7 +10,6 @@ import logging
 import openai
 from openai import OpenAI
 import os
-import telegram
 from dotenv import load_dotenv  # Подключаем dotenv
 
 logging.basicConfig(level=logging.INFO)
