@@ -7,6 +7,8 @@ from fastapi import FastAPI, Request
 from dotenv import load_dotenv
 import logging
 from aiohttp import ClientSession
+from aiogram.types import Update
+from fastapi import Request
 import os
 import openai
 from openai import OpenAI
@@ -104,7 +106,7 @@ async def process_social(message: types.Message, state: FSMContext):
             max_tokens=1000,
             temperature=0.7
         )
-        answer = response['choices'][0]['message']['content']
+        answer = response.choices[0].message.content
         await message.reply("Вот твой прогноз будущего:" + answer)
     except Exception as e:
         logging.error(f"Ошибка OpenAI: {e}")
@@ -118,20 +120,19 @@ WEBAPP_PORT = int(os.getenv("PORT", 8000))
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # 👇 Устанавливаем webhook при запуске
     await bot.set_webhook(WEBHOOK_URL)
     logging.info(f"Webhook установлен: {WEBHOOK_URL}")
- 
- # Создаём aiohttp сессию для выполнения асинхронных запросов
-    async with ClientSession() as session:
-        yield
-    
-
-    # 👇 Удаляем webhook при завершении
+    yield
     await bot.delete_webhook()
     logging.info("Webhook удалён")
-
+    
 app = FastAPI(lifespan=lifespan)
+
+@app.post("/webhook")
+async def telegram_webhook(update: dict):
+    telegram_update = Update(**update)
+    await dp.process_update(telegram_update)
+    return {"ok": True}
 
 @app.api_route("/", methods=["GET", "HEAD"])
 async def root():
