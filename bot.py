@@ -4,6 +4,7 @@ from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters.state import State, StatesGroup
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from fastapi import FastAPI
+from aiogram import Bot
 from dotenv import load_dotenv
 import logging
 from aiohttp import ClientSession
@@ -133,7 +134,8 @@ app = FastAPI(lifespan=lifespan)
 
 @app.post("/webhook")
 async def telegram_webhook(update: dict):
-    telegram_update = Update(**update)
+    telegram_update = types.Update(**update)
+    Bot.set_current(bot)
     await dp.process_update(telegram_update)
     return {"ok": True}
 
